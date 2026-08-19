@@ -2,6 +2,39 @@
 
 ## [Unreleased]
 
+### Breaking Changes
+
+- Removed the Google Gemini CLI and Google Antigravity providers. Upstream pi-ai no longer ships
+  either one, so their models could not be resolved. The Gemini CLI OAuth login is still present in
+  the code but has no provider to talk to.
+
+### Added
+
+- Markdown export. Pick a folder once and sessions are written into it as .md files with YAML
+  frontmatter carrying title, dates, model, reasoning level, token counts and cost. Export a single
+  session or all of them, from the session list. The folder is shown in Settings under Export,
+  where it can be changed or cleared.
+- OpenAI Codex models through GPT-5.6 (Luna, Sol, Terra), plus GPT-5.5 and GPT-5.4 Mini
+- Extra High and Max reasoning levels, offered per model instead of from a fixed list
+- The reasoning level is now remembered across sessions
+
+### Changed
+
+- Vendored the pi-web-ui package into `src/web-ui`. Upstream deleted the package, so the extension
+  now owns this code and can change the chat UI directly.
+- Moved to pi-ai and pi-agent-core 0.84 under the `@earendil-works` scope
+- Switched from `@sinclair/typebox` to `typebox` v1, matching pi-ai
+
+### Fixed
+
+- Completed assistant messages no longer vanish from the transcript. The agent appends to
+  `state.messages` in place, so the array reference never changed and the message list was never
+  re-rendered. The text was visible only while it streamed, then disappeared when the streaming
+  container was cleared, and came back only after reloading the session from storage.
+- The reasoning level no longer resets to Medium every time a session starts
+- Reasoning levels above High are now selectable on models that support them
+- Refreshed eleven per-provider default models that pointed at models the catalog had dropped
+
 ## [1.0.0] - 2026-03-15
 
 ### Added

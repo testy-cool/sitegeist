@@ -15,9 +15,17 @@ If the user did not give you a concrete task, read README.md first.
 - Always ask before removing functionality or code that appears intentional
 
 ## Dependencies
-- `@mariozechner/mini-lit`, `@mariozechner/pi-ai`, `@mariozechner/pi-web-ui`, `@mariozechner/pi-agent-core` are linked via `file:` to sibling repos `../mini-lit` and `../pi-mono`
+- `@mariozechner/mini-lit`, `@earendil-works/pi-ai`, `@earendil-works/pi-agent-core` are linked via `file:` to sibling repos `../mini-lit` and `../pi-mono`
 - Changes to those packages require rebuilding them (the dev watcher handles this)
 - If you need to modify upstream code, edit it in `../pi-mono` or `../mini-lit` directly and rebuild
+- `pi-web-ui` no longer exists upstream. It is vendored into `src/web-ui` and is ours to edit
+  directly - no rebuild step. The specifier `@mariozechner/pi-web-ui` still resolves to it via the
+  esbuild alias in `scripts/build.mjs` and the `paths` entry in `tsconfig.build.json`.
+- pi-ai regenerates its model catalog from models.dev on every build, so model ids come and go.
+  After upgrading pi-mono, re-check `DEFAULT_MODELS` in `src/sidepanel.ts` - an id that no longer
+  resolves fails silently.
+- Symbols that moved out of the pi-ai root (`getModel`, `getModels`, `getProviders`, `streamSimple`,
+  `complete`) are imported from `@earendil-works/pi-ai/compat`.
 
 ## Changelog
 Location: `CHANGELOG.md`
@@ -76,6 +84,7 @@ src/
   storage/              # IndexedDB storage (sessions, skills, costs)
   prompts/              # System prompt and token counting
   components/           # UI components (Toast, TabPill, OrbAnimation)
+  web-ui/               # Vendored pi-web-ui (chat UI, storage, sandbox, tool renderers)
 site/
   src/frontend/         # Static landing page and install instructions
 static/
