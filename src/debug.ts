@@ -1,7 +1,7 @@
+import { getModel } from "@earendil-works/pi-ai/compat";
 import { Button } from "@mariozechner/mini-lit/dist/Button.js";
 import { icon } from "@mariozechner/mini-lit/dist/icons.js";
 import { Switch } from "@mariozechner/mini-lit/dist/Switch.js";
-import { getModel } from "@mariozechner/pi-ai";
 import { setAppStorage } from "@mariozechner/pi-web-ui";
 import { html, render } from "lit";
 import { ArrowLeft, Bug, MousePointer2, Play, Sparkles } from "lucide";
@@ -16,7 +16,7 @@ interface TestPrompt {
 
 const models = [
 	getModel("anthropic", "claude-sonnet-4-5-20250929"),
-	getModel("openai", "gpt-5-codex"),
+	getModel("openai", "gpt-5.3-codex"),
 	getModel("google", "gemini-2.5-pro"),
 	getModel("openrouter", "z-ai/glm-4.6"),
 ];

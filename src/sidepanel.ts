@@ -8,8 +8,14 @@ import {
 	type AgentMessage,
 	type AgentState,
 	type AgentTool,
-} from "@mariozechner/pi-agent-core";
-import { getModel, getModels, type Model } from "@mariozechner/pi-ai";
+} from "@earendil-works/pi-agent-core";
+import {
+	clampThinkingLevel,
+	getModel,
+	getModels,
+	type Model,
+	type ModelThinkingLevel,
+} from "@earendil-works/pi-ai/compat";
 import {
 	ChatPanel,
 	createExtractDocumentTool,
@@ -27,10 +33,10 @@ import { AboutTab } from "./dialogs/AboutTab.js";
 import { ApiKeyOrOAuthDialog } from "./dialogs/ApiKeyOrOAuthDialog.js";
 import { ApiKeysOAuthTab } from "./dialogs/ApiKeysOAuthTab.js";
 import { CostsTab } from "./dialogs/CostsTab.js";
+import { ExportTab } from "./dialogs/ExportTab.js";
 import { SessionCostDialog } from "./dialogs/SessionCostDialog.js";
 import { SitegeistSessionListDialog } from "./dialogs/SessionListDialog.js";
 import { SkillsTab } from "./dialogs/SkillsTab.js";
-import { UpdateNotificationDialog } from "./dialogs/UpdateNotificationDialog.js";
 import { UserScriptsPermissionDialog } from "./dialogs/UserScriptsPermissionDialog.js";
 import { WelcomeSetupDialog } from "./dialogs/WelcomeSetupDialog.js";
 import { browserMessageTransformer } from "./messages/message-transformer.js";
@@ -105,30 +111,33 @@ const recordedCostMessages = new Set<AgentMessage>();
 // Cached auth type label for the current provider
 let authLabel = "";
 
+// Default model per provider. Ids are validated against the pi-ai catalog, which drops models as
+// providers retire them - an id that no longer resolves silently falls through to the generic
+// fallback, so these need re-checking whenever pi-ai is upgraded.
+// "google-antigravity" and "google-gemini-cli" are intentionally absent: pi-ai no longer ships
+// either provider.
 const DEFAULT_MODELS: Record<string, string> = {
 	"amazon-bedrock": "us.anthropic.claude-opus-4-6-v1",
 	anthropic: "claude-sonnet-4-6",
 	"azure-openai-responses": "gpt-5.2",
-	cerebras: "zai-glm-4.6",
-	"github-copilot": "gpt-4o",
+	cerebras: "gpt-oss-120b",
+	"github-copilot": "gpt-5.6-terra",
 	google: "gemini-2.5-flash",
-	"google-antigravity": "gemini-3.1-pro-high",
-	"google-gemini-cli": "gemini-2.5-pro",
-	"google-vertex": "gemini-3-pro-preview",
+	"google-vertex": "gemini-3.1-pro-preview",
 	groq: "openai/gpt-oss-20b",
 	huggingface: "moonshotai/Kimi-K2.5",
-	"kimi-coding": "kimi-k2-thinking",
-	minimax: "MiniMax-M2.1",
-	"minimax-cn": "MiniMax-M2.1",
+	"kimi-coding": "kimi-for-coding",
+	minimax: "MiniMax-M2.7",
+	"minimax-cn": "MiniMax-M2.7",
 	mistral: "devstral-medium-latest",
 	openai: "gpt-4o-mini",
-	"openai-codex": "gpt-5.1-codex-mini",
+	"openai-codex": "gpt-5.6-terra",
 	opencode: "claude-opus-4-6",
-	"opencode-go": "kimi-k2.5",
+	"opencode-go": "kimi-k2.6",
 	openrouter: "openai/gpt-5.1-codex",
-	"vercel-ai-gateway": "anthropic/claude-opus-4-6",
-	xai: "grok-4-fast-non-reasoning",
-	zai: "glm-4.6",
+	"vercel-ai-gateway": "anthropic/claude-opus-5",
+	xai: "grok-4.6",
+	zai: "glm-4.7",
 };
 
 async function selectDefaultModelForAvailableProvider() {
@@ -141,7 +150,7 @@ async function selectDefaultModelForAvailableProvider() {
 		if (modelId) {
 			const model = getModel(provider as any, modelId);
 			if (model) {
-				agent.setModel(model);
+				agent.state.model = model;
 				await storage.settings.set("lastUsedModel", model);
 				await updateAuthLabel();
 				renderApp();
@@ -154,7 +163,7 @@ async function selectDefaultModelForAvailableProvider() {
 	for (const provider of providers) {
 		const models = getModels(provider as any);
 		if (models.length > 0) {
-			agent.setModel(models[0]);
+			agent.state.model = models[0];
 			await storage.settings.set("lastUsedModel", models[0]);
 			await updateAuthLabel();
 			renderApp();
@@ -181,7 +190,7 @@ async function hasAnyApiKey(): Promise<boolean> {
 function openApiKeysDialog(): Promise<void> {
 	return new Promise((resolve) => {
 		SettingsDialog.open(
-			[new ApiKeysOAuthTab(), new CostsTab(), new SkillsTab(), new ProxyTab(), new AboutTab()],
+			[new ApiKeysOAuthTab(), new CostsTab(), new SkillsTab(), new ExportTab(), new ProxyTab(), new AboutTab()],
 			resolve,
 		);
 	});
@@ -378,11 +387,20 @@ const createAgent = async (initialState?: Partial<AgentState>, shouldSave = true
 		defaultModel = getModel("anthropic", "claude-sonnet-4-6");
 	}
 
+	// Carry the reasoning level across sessions the same way the model is carried. Without this a
+	// new session always started at "medium" and silently discarded the user's choice. Clamp it,
+	// because the saved level may be unsupported by whichever model this session opens with.
+	const savedThinkingLevel = await storage.settings.get<ModelThinkingLevel>("lastUsedThinkingLevel");
+	const initialModel = initialState?.model ?? defaultModel;
+	const thinkingLevel: ModelThinkingLevel = initialModel
+		? clampThinkingLevel(initialModel, savedThinkingLevel ?? "medium")
+		: (savedThinkingLevel ?? "medium");
+
 	agent = new Agent({
 		initialState: initialState || {
 			systemPrompt: SYSTEM_PROMPT,
 			model: defaultModel,
-			thinkingLevel: "medium",
+			thinkingLevel,
 			messages: [],
 			tools: [],
 		},
@@ -411,6 +429,10 @@ const createAgent = async (initialState?: Partial<AgentState>, shouldSave = true
 			storage.settings
 				.set("lastUsedModel", agent.state.model)
 				.catch((err) => console.error("Failed to save lastUsedModel:", err));
+
+			storage.settings
+				.set("lastUsedThinkingLevel", agent.state.thinkingLevel)
+				.catch((err) => console.error("Failed to save lastUsedThinkingLevel:", err));
 
 			// Update auth label when model changes
 			updateAuthLabel().catch(() => {});
@@ -473,7 +495,7 @@ const createAgent = async (initialState?: Partial<AgentState>, shouldSave = true
 			ModelSelector.open(
 				agent.state.model,
 				(model) => {
-					agent.setModel(model);
+					agent.state.model = model;
 					chatPanel.agentInterface?.requestUpdate();
 					updateAuthLabel().catch(() => {});
 					renderApp();
@@ -508,7 +530,7 @@ const createAgent = async (initialState?: Partial<AgentState>, shouldSave = true
 			// Only add if URL changed
 			if (!lastUrl || lastUrl !== tab.url) {
 				const navMessage = await createNavigationMessage(tab.url, tab.title || "Untitled", tab.favIconUrl, tab.id);
-				agent.appendMessage(navMessage);
+				agent.state.messages = [...agent.state.messages, navMessage];
 			}
 		},
 		onCostClick: () => {
@@ -546,6 +568,11 @@ const createAgent = async (initialState?: Partial<AgentState>, shouldSave = true
 			const extractImageTool = new ExtractImageTool();
 			extractImageTool.windowId = currentWindowId;
 
+			// Each tool declares its own TypeBox schema, so this array is heterogeneous. Under
+			// typebox v1 `Static<any>` widens to `unknown`, and TypeScript will not accept a
+			// concretely-typed execute() where it expects one taking `unknown` params. The agent
+			// validates arguments against each tool's schema before calling execute, so the
+			// widening is safe; only the compiler cannot express it.
 			const tools: AgentTool<any, any>[] = [
 				navigateTool,
 				selectElementTool,
@@ -553,12 +580,12 @@ const createAgent = async (initialState?: Partial<AgentState>, shouldSave = true
 				skillTool,
 				extractDocumentTool,
 				extractImageTool,
-			];
+			].map((tool) => tool as unknown as AgentTool<any, any>);
 
 			// Conditionally add debugger tool if enabled
 			if (debuggerModeEnabled) {
 				const debuggerTool = new DebuggerTool();
-				tools.push(debuggerTool);
+				tools.push(debuggerTool as unknown as AgentTool<any, any>);
 			}
 
 			return tools;
@@ -705,6 +732,7 @@ const renderApp = () => {
 								new ApiKeysOAuthTab(),
 								new CostsTab(),
 								new SkillsTab(),
+								new ExportTab(),
 								new ProxyTab(),
 								new AboutTab(),
 							]),
@@ -863,44 +891,6 @@ async function testSteps(): Promise<boolean> {
 }
 
 // ============================================================================
-// UPDATE CHECK
-// ============================================================================
-function isNewerVersion(latest: string, current: string): boolean {
-	const latestParts = latest.split(".").map(Number);
-	const currentParts = current.split(".").map(Number);
-
-	for (let i = 0; i < Math.max(latestParts.length, currentParts.length); i++) {
-		const l = latestParts[i] || 0;
-		const c = currentParts[i] || 0;
-		if (l > c) return true;
-		if (l < c) return false;
-	}
-	return false;
-}
-
-async function checkForUpdates() {
-	try {
-		const currentVersion = chrome.runtime.getManifest().version;
-
-		// Fetch latest version
-		const response = await fetch("https://sitegeist.ai/uploads/version.json", {
-			cache: "no-cache",
-		});
-		const data = await response.json();
-		const latestVersion = data.version;
-
-		// Show dialog only if server version is newer than current version
-		if (isNewerVersion(latestVersion, currentVersion)) {
-			// Show update dialog - blocks until extension is updated and restarted
-			await UpdateNotificationDialog.show(latestVersion);
-		}
-	} catch (err) {
-		console.warn("[Sidepanel] Failed to check for updates:", err);
-		// Silently fail - don't block startup
-	}
-}
-
-// ============================================================================
 // INIT
 // ============================================================================
 async function initApp() {
@@ -940,7 +930,6 @@ async function initApp() {
 	}
 
 	// TODO: re-enable update check when publishing to users
-	// await checkForUpdates();
 
 	// Initialize default skills
 	const { initializeDefaultSkills } = await import("./tools/skill.js");
@@ -997,7 +986,7 @@ async function initApp() {
 				await createAgent();
 				if (agent) {
 					const welcomeMessage = createWelcomeMessage(tutorials);
-					agent.appendMessage(welcomeMessage);
+					agent.state.messages = [...agent.state.messages, welcomeMessage];
 				}
 				renderApp();
 				return;
@@ -1030,7 +1019,7 @@ async function initApp() {
 	// Add welcome message for new sessions
 	if (agent) {
 		const welcomeMessage = createWelcomeMessage(tutorials);
-		agent.appendMessage(welcomeMessage);
+		agent.state.messages = [...agent.state.messages, welcomeMessage];
 	}
 
 	renderApp();
