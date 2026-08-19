@@ -92,6 +92,19 @@ declare module "@mariozechner/mini-lit" {
 		"Update Required": string;
 		"A new version ({version}) is available. Please update to continue.": string;
 		"Update Now": string;
+		Repository: string;
+		"Original project": string;
+		"A fork of Mario Zechner's Sitegeist. Licensed AGPL-3.0.": string;
+		"Export Markdown": string;
+		"Export as Markdown": string;
+		"Write every session to a folder you choose, as Markdown": string;
+		"Wrote {count} to {folder}": string;
+		"Markdown export folder": string;
+		"Sessions are written here as .md files with frontmatter.": string;
+		"No folder chosen yet": string;
+		"Permission needed": string;
+		Choose: string;
+		Change: string;
 	}
 }
 
@@ -184,6 +197,22 @@ const sitegeistTranslations = {
 		"A new version ({version}) is available. Please update to continue.":
 			"A new version ({version}) is available. Please update to continue.",
 		"Update Now": "Update Now",
+		Repository: "Repository",
+		"Original project": "Original project",
+		"A fork of Mario Zechner's Sitegeist. Licensed AGPL-3.0.":
+			"A fork of Mario Zechner's Sitegeist. Licensed AGPL-3.0.",
+		"Export Markdown": "Export Markdown",
+		"Export as Markdown": "Export as Markdown",
+		"Write every session to a folder you choose, as Markdown":
+			"Write every session to a folder you choose, as Markdown",
+		"Wrote {count} to {folder}": "Wrote {count} to {folder}",
+		"Markdown export folder": "Markdown export folder",
+		"Sessions are written here as .md files with frontmatter.":
+			"Sessions are written here as .md files with frontmatter.",
+		"No folder chosen yet": "No folder chosen yet",
+		"Permission needed": "Permission needed",
+		Choose: "Choose",
+		Change: "Change",
 	},
 	de: {
 		"Permission request failed": "Berechtigungsanfrage fehlgeschlagen",
@@ -275,6 +304,22 @@ const sitegeistTranslations = {
 		"A new version ({version}) is available. Please update to continue.":
 			"Eine neue Version ({version}) ist verfügbar. Bitte aktualisieren Sie, um fortzufahren.",
 		"Update Now": "Jetzt aktualisieren",
+		Repository: "Repository",
+		"Original project": "Originalprojekt",
+		"A fork of Mario Zechner's Sitegeist. Licensed AGPL-3.0.":
+			"Ein Fork von Mario Zechners Sitegeist. Lizenziert unter AGPL-3.0.",
+		"Export Markdown": "Markdown exportieren",
+		"Export as Markdown": "Als Markdown exportieren",
+		"Write every session to a folder you choose, as Markdown":
+			"Alle Sitzungen als Markdown in einen selbst gewählten Ordner schreiben",
+		"Wrote {count} to {folder}": "{count} nach {folder} geschrieben",
+		"Markdown export folder": "Ordner für Markdown-Export",
+		"Sessions are written here as .md files with frontmatter.":
+			"Sitzungen werden hier als .md-Dateien mit Frontmatter gespeichert.",
+		"No folder chosen yet": "Noch kein Ordner gewählt",
+		"Permission needed": "Berechtigung erforderlich",
+		Choose: "Auswählen",
+		Change: "Ändern",
 	},
 };
 

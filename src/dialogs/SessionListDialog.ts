@@ -6,6 +6,8 @@ import { formatUsage, getAppStorage, type SessionData, type SessionMetadata } fr
 import Fuse from "fuse.js";
 import { html } from "lit";
 import { customElement, state } from "lit/decorators.js";
+import { sessionToMarkdown } from "../export/session-markdown.js";
+import { ensureVault, writeSession } from "../export/vault.js";
 import * as port from "../utils/port.js";
 
 type ExportedSession = {
@@ -21,6 +23,7 @@ export class SitegeistSessionListDialog extends DialogBase {
 	@state() private currentWindowId: number | undefined;
 	@state() private searchQuery = "";
 	@state() private showDeleteMenu = false;
+	@state() private exportStatus = "";
 
 	private onSelectCallback?: (sessionId: string) => void;
 	private onDeleteCallback?: (sessionId: string) => void;
@@ -187,6 +190,46 @@ export class SitegeistSessionListDialog extends DialogBase {
 			URL.revokeObjectURL(url);
 		} catch (err) {
 			console.error("Failed to export sessions:", err);
+			alert(i18n("Export failed. Check console for details."));
+		}
+	}
+
+	/**
+	 * Writes sessions into the user's chosen folder as Markdown.
+	 *
+	 * ensureVault() runs FIRST, before any storage read. It can open the folder picker or a
+	 * permission prompt, both of which require transient user activation - awaiting IndexedDB
+	 * beforehand lets that activation expire and the call throws.
+	 */
+	private async handleExportMarkdown(sessionId?: string) {
+		let directory: FileSystemDirectoryHandle;
+		try {
+			directory = await ensureVault();
+		} catch (err) {
+			// An aborted picker is the user changing their mind, not a failure worth reporting.
+			if ((err as DOMException)?.name === "AbortError") return;
+			console.error("Failed to open export folder:", err);
+			alert((err as Error)?.message || i18n("Export failed. Check console for details."));
+			return;
+		}
+
+		try {
+			const storage = getAppStorage();
+			if (!storage.sessions) return;
+
+			const wanted = sessionId ? this.sessions.filter((s) => s.id === sessionId) : this.sessions;
+			let written = 0;
+			for (const metadata of wanted) {
+				const session = await storage.sessions.loadSession(metadata.id);
+				if (!session) continue;
+				await writeSession(directory, sessionToMarkdown(session, metadata));
+				written++;
+			}
+			this.exportStatus = i18n("Wrote {count} to {folder}")
+				.replace("{count}", String(written))
+				.replace("{folder}", directory.name);
+		} catch (err) {
+			console.error("Failed to export sessions as Markdown:", err);
 			alert(i18n("Export failed. Check console for details."));
 		}
 	}
@@ -404,6 +447,13 @@ export class SitegeistSessionListDialog extends DialogBase {
 						>
 							${i18n("Export All")}
 						</button>
+						<button
+							class="flex-1 px-3 py-2 text-sm font-medium rounded-md border border-border bg-background text-foreground hover:bg-secondary transition-colors"
+							@click=${() => this.handleExportMarkdown()}
+							title=${i18n("Write every session to a folder you choose, as Markdown")}
+						>
+							${i18n("Export Markdown")}
+						</button>
 						<div class="relative delete-menu-container">
 							<button
 								class="px-3 py-2 text-sm font-medium rounded-md border border-border bg-background text-foreground hover:bg-secondary transition-colors"
@@ -459,6 +509,11 @@ export class SitegeistSessionListDialog extends DialogBase {
 							}
 						</div>
 					</div>
+					${
+						this.exportStatus
+							? html`<div class="mt-2 text-xs text-muted-foreground">${this.exportStatus}</div>`
+							: ""
+					}
 
 					<!-- Search bar -->
 					<div class="mt-3">
@@ -554,6 +609,21 @@ export class SitegeistSessionListDialog extends DialogBase {
 															<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
 															<polyline points="7 10 12 15 17 10"></polyline>
 															<line x1="12" y1="15" x2="12" y2="3"></line>
+														</svg>
+													</button>
+													<button
+														class="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-secondary text-foreground transition-opacity"
+														@click=${(e: Event) => {
+															e.stopPropagation();
+															this.handleExportMarkdown(session.id);
+														}}
+														title=${i18n("Export as Markdown")}
+													>
+														<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+															<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+															<polyline points="14 2 14 8 20 8"></polyline>
+															<line x1="8" y1="13" x2="16" y2="13"></line>
+															<line x1="8" y1="17" x2="13" y2="17"></line>
 														</svg>
 													</button>
 													<button
