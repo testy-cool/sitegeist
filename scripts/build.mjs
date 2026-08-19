@@ -47,6 +47,9 @@ const buildOptions = {
 	alias: {
 		process: join(packageRoot, "scripts/process-shim.js"),
 		"@mariozechner/mini-lit": join(packageRoot, "node_modules/@mariozechner/mini-lit"),
+		// web-ui is vendored into this repo (upstream package was deleted); keep the old
+		// specifier so call sites do not need to change.
+		"@mariozechner/pi-web-ui": join(packageRoot, "src/web-ui/index.ts"),
 		lit: join(packageRoot, "node_modules/lit"),
 		"lit/decorators.js": join(packageRoot, "node_modules/lit/decorators.js"),
 		"lit/directives/class-map.js": join(packageRoot, "node_modules/lit/directives/class-map.js"),

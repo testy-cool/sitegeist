@@ -12,6 +12,12 @@
 		"skipLibCheck": true,
 		"forceConsistentCasingInFileNames": true,
 		"resolveJsonModule": true,
+		"allowImportingTsExtensions": true,
+		"baseUrl": ".",
+		"paths": {
+			"@mariozechner/pi-web-ui": ["./src/web-ui/index.ts"],
+			"@mariozechner/pi-web-ui/*": ["./src/web-ui/*"]
+		},
 		"isolatedModules": true,
 		"noEmit": true,
 		"experimentalDecorators": true,
