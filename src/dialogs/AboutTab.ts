@@ -34,6 +34,10 @@ export class AboutTab extends SettingsTab {
 						<span class="font-medium text-foreground">${i18n("Version:")}</span>
 						<span class="text-muted-foreground ml-2">${version}</span>
 					</div>
+					<div class="text-sm">
+						<span class="font-medium text-foreground">${i18n("Build:")}</span>
+						<span class="text-muted-foreground ml-2 font-mono">${__BUILD_STAMP__}</span>
+					</div>
 				</div>
 
 				<div class="pt-4 space-y-2">

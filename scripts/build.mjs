@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import { copyFileSync, existsSync, mkdirSync, readdirSync, rmSync, watch } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -8,6 +9,22 @@ const __dirname = dirname(__filename);
 const packageRoot = join(__dirname, "..");
 const isWatch = process.argv.includes("--watch");
 const staticDir = join(packageRoot, "static");
+
+// The manifest version only moves when release.sh runs, so it cannot tell two
+// development builds apart. Stamp the commit into the bundle instead, and mark a
+// dirty tree, so "what are you running?" has an exact answer. Builds from an
+// extracted release zip have no .git and fall back to "unknown" rather than failing.
+function buildStamp() {
+	const git = (...args) => execFileSync("git", args, { cwd: packageRoot, encoding: "utf8" }).trim();
+	try {
+		const sha = git("rev-parse", "--short", "HEAD");
+		return git("status", "--porcelain") ? `${sha}-dirty` : sha;
+	} catch {
+		return "unknown";
+	}
+}
+
+const stamp = buildStamp();
 
 // Chrome only
 const targetBrowser = "chrome";
@@ -41,6 +58,7 @@ const buildOptions = {
 		"process.env.NODE_ENV": JSON.stringify(process.env.NODE_ENV ?? (isWatch ? "development" : "production")),
 		"process.env.TARGET_BROWSER": JSON.stringify(targetBrowser),
 		global: "globalThis",
+		__BUILD_STAMP__: JSON.stringify(stamp),
 	},
 	inject: [join(packageRoot, "scripts/process-shim.js")],
 	// Force all mini-lit and lit imports to resolve to sitegeist's node_modules
