@@ -10,3 +10,7 @@ sitegeist-latest.zip
 *.mp4
 version.json
 dist-test
+
+# Release artifacts, built here and uploaded with gh release create
+sitegeist.zip
+pi-ai-model-data-*.tar.gz
