@@ -1,9 +1,15 @@
 name: Release Extension
 
 on:
-  push:
-    tags:
-      - 'v*'
+  # Deliberately not triggered by tags. Releases are built on the machine where they
+  # were tested and uploaded with `gh release create`, so that what gets installed is
+  # the artifact that was actually exercised. This job would build a second, different
+  # one: it clones pi-mono at its default branch and regenerates the pi-ai model
+  # catalog from the live models.dev feed. Since 2026-08-30 that regeneration does not
+  # even compile, because the feed dropped the openai-completions models from
+  # cloudflare-ai-gateway and the hand-written provider file no longer type-checks.
+  # Kept runnable by hand for the day the upstream build is worth trying again.
+  workflow_dispatch:
 
 permissions:
   contents: write
