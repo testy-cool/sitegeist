@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-08-30
+
 ### Breaking Changes
 
 - Removed the Google Gemini CLI and Google Antigravity providers. Upstream pi-ai no longer ships
