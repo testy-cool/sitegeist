@@ -6,32 +6,23 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Repo layout on disk
 
-Sitegeist depends on two sibling repos linked by `file:` in `package.json`. They must be checked out next to this one:
+There are no sibling repos to check out. `@earendil-works/pi-ai`, `@earendil-works/pi-agent-core` and `@mariozechner/mini-lit` install from npm at pinned exact versions, so a clone plus `npm install` here and once inside `site/` is the whole setup. The agent loop, model catalog and streaming live in pi-ai and arrive prebuilt.
+
+To work on pi-ai or mini-lit themselves, check the source repo out anywhere and point the dependency at it for as long as you need it:
 
 ```
-parent/
-  mini-lit/    # https://github.com/badlogic/mini-lit  -> @mariozechner/mini-lit
-  pi-mono/     # https://github.com/badlogic/pi-mono   -> @earendil-works/pi-{ai,agent-core}
-  sitegeist/   # this repo
+npm install ../pi-mono/packages/ai ../pi-mono/packages/agent --install-links=false
 ```
 
-`npm install` must be run in all three, plus once inside `site/`. The agent loop, model catalog, and streaming live in `pi-mono`; edit them there and rebuild, and the dev watcher picks it up.
+`--install-links=false` is not optional. It makes npm symlink the checkout, which is what lets a rebuild there reach this build. Without it npm 9 packs a copy into `node_modules`, a watcher then rebuilds a tree nothing imports, and the edit appears to do nothing at all, with no error to follow. (npm 10 defaults to symlinking, npm 9 to copying, so the behaviour depends on which npm is first on `PATH`.) To go back, restore `package.json` and `package-lock.json` from git and reinstall.
 
-That last part holds only while the two `file:` dependencies are installed as **symlinks**, which is not something you can assume. npm decides it with `install-links`, and the default differs by major version: npm 9 defaults to `true` and packs each `file:` dependency into a real copy under `node_modules`, npm 10 defaults to `false` and links it. A copy makes the sibling checkouts dead weight. `./dev.sh` still starts watchers in `../pi-mono` and `../mini-lit`, they still rebuild happily, and nothing they produce reaches the extension, so an edit there looks like it changed nothing. Check which install you have before debugging that:
-
-```
-ls -ld node_modules/@earendil-works/pi-ai node_modules/@mariozechner/mini-lit
-```
-
-Symlinks are correct. Real directories mean reinstalling with `npm install --install-links=false`, or with an npm 10.x on `PATH`. Verified 2026-08-30: npm 9.2.0 reports `install-links` `true`, npm 10.9.x reports `false`.
-
-**The chat UI does not.** `pi-web-ui` was deleted upstream with no successor, so it is vendored into `src/web-ui` — ChatPanel, AgentInterface, MessageEditor, ModelSelector, SettingsDialog, the sandboxed iframe, the base storage stores, and the tool-renderer registry are all ours to edit directly, with no rebuild step. The old specifier `@mariozechner/pi-web-ui` still resolves to it, via the esbuild `alias` in `scripts/build.mjs` and the `paths` entry in `tsconfig.build.json`, so call sites did not have to change. Vendored files use `.ts` import extensions (hence `allowImportingTsExtensions`), unlike sitegeist's own `.js`-suffixed ones.
+**The chat UI is vendored, not a dependency.** `pi-web-ui` was deleted upstream with no successor, so it is vendored into `src/web-ui` — ChatPanel, AgentInterface, MessageEditor, ModelSelector, SettingsDialog, the sandboxed iframe, the base storage stores, and the tool-renderer registry are all ours to edit directly, with no rebuild step. The old specifier `@mariozechner/pi-web-ui` still resolves to it, via the esbuild `alias` in `scripts/build.mjs` and the `paths` entry in `tsconfig.build.json`, so call sites did not have to change. Vendored files use `.ts` import extensions (hence `allowImportingTsExtensions`), unlike sitegeist's own `.js`-suffixed ones.
 
 Two pi-ai details worth knowing before you debug a model problem:
 
-- Its model catalog is **regenerated from the live models.dev feed on every build**, so ids appear and disappear over time and old checkouts stop compiling. `DEFAULT_MODELS` in `src/sidepanel.ts` must be re-validated after any pi-mono upgrade — an id that no longer resolves fails silently and falls through to the generic fallback.
-- That catalog is **not in git**: `packages/ai/src/providers/data/` is gitignored. Pinning pi-mono to a commit therefore pins nothing — a fresh clone refetches the feed, and a newer feed against older source may not compile at all. On 2026-08-30 models.dev dropped the `openai-completions` models from `cloudflare-ai-gateway`, which narrowed a generated type so the hand-written provider file no longer type-checked (`src/providers/cloudflare-ai-gateway.ts(19,4): error TS2353`). That file is identical on pi-mono `main`, so upgrading does not escape it. The way out is to copy `providers/data/` from a checkout known to build and then use **`npm run build:offline`**, never `npm run build` — the latter regenerates and reintroduces the breakage. `npm install` in pi-mono does the same, so restore the directory afterwards.
-- The `openai-codex` list is the exception: it is **hardcoded** in `packages/ai/scripts/generate-models.ts`, so new ChatGPT-subscription models only arrive when pi-mono itself is upgraded.
+- The published package ships its model catalog **frozen into `dist/providers/data/`**, so one pi-ai version means one model list, the same on every machine on every day. `DEFAULT_MODELS` in `src/sidepanel.ts` therefore only needs re-validating when the pinned version moves — but it does need it then, because an id that no longer resolves fails silently and falls through to the generic fallback.
+- Building pi-ai **from a source checkout** does not work that way: `packages/ai/src/providers/data/` is gitignored and regenerated from the live models.dev feed on every build, so pinning a pi-mono commit pins nothing, and a newer feed against older source may not compile at all. On 2026-08-30 models.dev dropped the `openai-completions` models from `cloudflare-ai-gateway`, which narrowed a generated type until the hand-written provider file no longer type-checked (`src/providers/cloudflare-ai-gateway.ts(19,4): error TS2353`). If you link a checkout, copy `providers/data/` from one known to build and use **`npm run build:offline`**, never `npm run build`. Depending on the published package avoids all of this.
+- The `openai-codex` list is hardcoded in `packages/ai/scripts/generate-models.ts` rather than fetched, so new ChatGPT-subscription models arrive only when the pi-ai version is bumped.
 - `getModel`, `getModels`, `getProviders`, `streamSimple`, and `complete` moved out of the package root; import them from `@earendil-works/pi-ai/compat`.
 
 ## Commands

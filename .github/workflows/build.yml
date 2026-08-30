@@ -3,12 +3,8 @@ name: Release Extension
 on:
   # Deliberately not triggered by tags. Releases are built on the machine where they
   # were tested and uploaded with `gh release create`, so that what gets installed is
-  # the artifact that was actually exercised. This job would build a second, different
-  # one: it clones pi-mono at its default branch and regenerates the pi-ai model
-  # catalog from the live models.dev feed. Since 2026-08-30 that regeneration does not
-  # even compile, because the feed dropped the openai-completions models from
-  # cloudflare-ai-gateway and the hand-written provider file no longer type-checks.
-  # Kept runnable by hand for the day the upstream build is worth trying again.
+  # the artifact that was actually exercised, rather than a second one built here.
+  # Kept runnable by hand.
   workflow_dispatch:
 
 permissions:
@@ -24,20 +20,8 @@ jobs:
         with:
           node-version: 22
 
-      - name: Clone mini-lit
-        run: git clone --depth 1 https://github.com/badlogic/mini-lit.git ../mini-lit
-
-      - name: Clone pi-mono
-        run: git clone --depth 1 https://github.com/badlogic/pi-mono.git ../pi-mono
-
-      - name: Install mini-lit
-        run: cd ../mini-lit && npm install && npm run build
-
-      - name: Install pi-mono
-        run: cd ../pi-mono && npm install && npm run build
-
       - name: Install sitegeist
-        run: npm install
+        run: npm ci
 
       - name: Build extension
         run: npm run build

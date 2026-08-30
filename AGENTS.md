@@ -15,13 +15,13 @@ If the user did not give you a concrete task, read README.md first.
 - Always ask before removing functionality or code that appears intentional
 
 ## Dependencies
-- `@mariozechner/mini-lit`, `@earendil-works/pi-ai`, `@earendil-works/pi-agent-core` are linked via `file:` to sibling repos `../mini-lit` and `../pi-mono`
-- Changes to those packages require rebuilding them (the dev watcher handles this)
-- If you need to modify upstream code, edit it in `../pi-mono` or `../mini-lit` directly and rebuild
+- `@mariozechner/mini-lit`, `@earendil-works/pi-ai`, `@earendil-works/pi-agent-core` install from npm at pinned exact versions. No sibling checkouts, no `file:` links
+- To modify upstream code, check the source repo out and link it with `npm install <path> --install-links=false`, then restore `package.json` and `package-lock.json` from git when done
+- The `--install-links=false` flag is required. npm 9 otherwise copies the checkout into `node_modules` and your rebuilds never reach this build
 - `pi-web-ui` no longer exists upstream. It is vendored into `src/web-ui` and is ours to edit
   directly - no rebuild step. The specifier `@mariozechner/pi-web-ui` still resolves to it via the
   esbuild alias in `scripts/build.mjs` and the `paths` entry in `tsconfig.build.json`.
-- pi-ai regenerates its model catalog from models.dev on every build, so model ids come and go.
+- The published pi-ai ships a frozen model catalog, so model ids move only when its version is bumped. Building pi-ai from source regenerates from models.dev instead, which is what makes linked checkouts fragile.
   After upgrading pi-mono, re-check `DEFAULT_MODELS` in `src/sidepanel.ts` - an id that no longer
   resolves fails silently.
 - Symbols that moved out of the pi-ai root (`getModel`, `getModels`, `getProviders`, `streamSimple`,

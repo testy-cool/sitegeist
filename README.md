@@ -31,35 +31,24 @@ Full detail in [CHANGELOG.md](CHANGELOG.md).
 
 ## Development
 
-Clone this repo plus its sibling dependencies into the same parent directory:
-
-```
-parent/
-  mini-lit/          # https://github.com/badlogic/mini-lit
-  pi-mono/           # https://github.com/badlogic/pi-mono
-  sitegeist/         # this repo
-```
-
-Install dependencies in each repo, plus the `site/` subproject:
+Clone this repo and install, here and in the `site/` subproject:
 
 ```bash
-(cd ../mini-lit && npm install)
-(cd ../pi-mono && npm install)
 npm install
 (cd site && npm install)
 ```
 
-`npm install` sets up the Husky pre-commit hook automatically.
+That is the whole setup. `mini-lit`, `pi-ai` and `pi-agent-core` come from npm at pinned exact versions, prebuilt, so no sibling checkouts are needed. `npm install` also sets up the Husky pre-commit hook.
 
-`pi-mono` regenerates its model catalog from the live models.dev feed on every build, so model ids come and go over time. After updating it, re-check `DEFAULT_MODELS` in `src/sidepanel.ts` — an id that no longer resolves fails silently.
+Each pi-ai version carries a fixed model catalog, so model ids only move when the dependency is bumped. Re-check `DEFAULT_MODELS` in `src/sidepanel.ts` when it is — an id that no longer resolves fails silently.
 
-Start all dev watchers (mini-lit, pi-mono, sitegeist extension, marketing site):
+Start the dev watchers (extension and marketing site):
 
 ```bash
 ./dev.sh
 ```
 
-Changes in `../mini-lit` or `../pi-mono` are rebuilt automatically and picked up by the sitegeist watcher. Changes under `src/web-ui` need no rebuild step — that code is part of this repo.
+Changes under `src/web-ui` need no rebuild step — that code is part of this repo. To hack on pi-ai or mini-lit, check the source out and link it with `npm install <path> --install-links=false`; the flag is what makes npm symlink rather than copy, and without it your edits never reach this build.
 
 To run only the extension watcher without dependencies or the marketing site:
 
@@ -125,7 +114,7 @@ Chrome re-confirms folder permission once per browser session, so the first Mark
 
 Bumps the version in `static/manifest.chrome.json`, commits, tags, and pushes to `origin`. GitHub Actions then builds the extension and creates a release on whichever repo `origin` points at.
 
-Note that `.github/workflows/build.yml` clones `mini-lit` and `pi-mono` at their default branch, so a release builds against whatever is current upstream on that day rather than a pinned commit.
+`.github/workflows/build.yml` is `workflow_dispatch` only, so a tag does not build anything. Releases are built and zipped on the machine where they were tested, then uploaded with `gh release create`, so what people install is the artifact that was actually exercised.
 
 ## Upstream-only scripts
 
