@@ -17,6 +17,14 @@ parent/
 
 `npm install` must be run in all three, plus once inside `site/`. The agent loop, model catalog, and streaming live in `pi-mono`; edit them there and rebuild, and the dev watcher picks it up.
 
+That last part holds only while the two `file:` dependencies are installed as **symlinks**, which is not something you can assume. npm decides it with `install-links`, and the default differs by major version: npm 9 defaults to `true` and packs each `file:` dependency into a real copy under `node_modules`, npm 10 defaults to `false` and links it. A copy makes the sibling checkouts dead weight. `./dev.sh` still starts watchers in `../pi-mono` and `../mini-lit`, they still rebuild happily, and nothing they produce reaches the extension, so an edit there looks like it changed nothing. Check which install you have before debugging that:
+
+```
+ls -ld node_modules/@earendil-works/pi-ai node_modules/@mariozechner/mini-lit
+```
+
+Symlinks are correct. Real directories mean reinstalling with `npm install --install-links=false`, or with an npm 10.x on `PATH`. Verified 2026-08-30: npm 9.2.0 reports `install-links` `true`, npm 10.9.x reports `false`.
+
 **The chat UI does not.** `pi-web-ui` was deleted upstream with no successor, so it is vendored into `src/web-ui` — ChatPanel, AgentInterface, MessageEditor, ModelSelector, SettingsDialog, the sandboxed iframe, the base storage stores, and the tool-renderer registry are all ours to edit directly, with no rebuild step. The old specifier `@mariozechner/pi-web-ui` still resolves to it, via the esbuild `alias` in `scripts/build.mjs` and the `paths` entry in `tsconfig.build.json`, so call sites did not have to change. Vendored files use `.ts` import extensions (hence `allowImportingTsExtensions`), unlike sitegeist's own `.js`-suffixed ones.
 
 Two pi-ai details worth knowing before you debug a model problem:
