@@ -17,6 +17,9 @@
 - OpenAI Codex models through GPT-5.6 (Luna, Sol, Terra), plus GPT-5.5 and GPT-5.4 Mini
 - Extra High and Max reasoning levels, offered per model instead of from a fixed list
 - The reasoning level is now remembered across sessions
+- The About tab shows the commit a build was made from, so two builds carrying the same version
+  number can be told apart. A build made outside a git checkout, such as from a release zip,
+  reports `unknown`.
 
 ### Changed
 
@@ -24,6 +27,9 @@
   now owns this code and can change the chat UI directly.
 - Moved to pi-ai and pi-agent-core 0.84 under the `@earendil-works` scope
 - Switched from `@sinclair/typebox` to `typebox` v1, matching pi-ai
+- Release zips are built on the machine where they were tested and uploaded by hand. Pushing a tag
+  no longer starts a GitHub Actions build, which produced a different artifact from an unpinned
+  pi-mono and had stopped compiling.
 
 ### Fixed
 
@@ -34,6 +40,9 @@
 - The reasoning level no longer resets to Medium every time a session starts
 - Reasoning levels above High are now selectable on models that support them
 - Refreshed eleven per-provider default models that pointed at models the catalog had dropped
+- `npm run typecheck` no longer fails on a fresh checkout. The token counter imported its prompts
+  from a pi-mono package that was deleted upstream, which only resolved on the machine where a
+  leftover directory happened to survive.
 
 ## [1.0.0] - 2026-03-15
 
