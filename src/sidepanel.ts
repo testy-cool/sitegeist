@@ -1,3 +1,4 @@
+import "./utils/model-catalog-patches.js";
 import { icon } from "@mariozechner/mini-lit";
 import { Button } from "@mariozechner/mini-lit/dist/Button.js";
 import { Input } from "@mariozechner/mini-lit/dist/Input.js";
@@ -121,6 +122,7 @@ const DEFAULT_MODELS: Record<string, string> = {
 	anthropic: "claude-sonnet-4-6",
 	"azure-openai-responses": "gpt-5.2",
 	cerebras: "gpt-oss-120b",
+	deepseek: "deepseek-flash",
 	"github-copilot": "gpt-5.6-terra",
 	google: "gemini-2.5-flash",
 	"google-vertex": "gemini-3.1-pro-preview",
