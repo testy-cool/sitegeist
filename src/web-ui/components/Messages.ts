@@ -6,8 +6,10 @@ import type {
 	ToolResultMessage as ToolResultMessageType,
 	UserMessage as UserMessageType,
 } from "@earendil-works/pi-ai";
+import { icon } from "@mariozechner/mini-lit";
 import { html, LitElement, type TemplateResult } from "lit";
 import { customElement, property } from "lit/decorators.js";
+import { GitBranch } from "lucide";
 import { renderTool } from "../tools/index.ts";
 import type { Attachment } from "../utils/attachment-utils.ts";
 import { formatUsage } from "../utils/format.ts";
@@ -30,6 +32,29 @@ export interface ArtifactMessage {
 	content?: string;
 	title?: string;
 	timestamp: string;
+	// Copied in from the chat this one was branched from, in its latest version there
+	carriedOver?: boolean;
+}
+
+/**
+ * "Branch" button under a user message. It only announces the request with a bubbling
+ * `branch-from-message` event; the app decides what a branch is.
+ */
+export function renderBranchButton(message: UserMessageWithAttachments | UserMessageType) {
+	return html`
+		<button
+			type="button"
+			class="mt-1 inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs text-muted-foreground opacity-0 group-hover:opacity-100 focus:opacity-100 hover:bg-accent hover:text-accent-foreground transition-opacity"
+			title=${i18n("Continue from here in a new chat")}
+			@click=${(e: Event) => {
+				e.currentTarget?.dispatchEvent(
+					new CustomEvent("branch-from-message", { bubbles: true, composed: true, detail: { message } }),
+				);
+			}}
+		>
+			${icon(GitBranch, "xs")} ${i18n("Branch")}
+		</button>
+	`;
 }
 
 declare module "@earendil-works/pi-agent-core" {
@@ -59,7 +84,7 @@ export class UserMessage extends LitElement {
 				: this.message.content.find((c) => c.type === "text")?.text || "";
 
 		return html`
-			<div class="flex justify-start mx-4">
+			<div class="group flex flex-col items-start mx-4">
 				<div class="user-message-container py-2 px-4 rounded-xl">
 					<markdown-block .content=${content}></markdown-block>
 					${
@@ -76,6 +101,7 @@ export class UserMessage extends LitElement {
 							: ""
 					}
 				</div>
+				${renderBranchButton(this.message)}
 			</div>
 		`;
 	}

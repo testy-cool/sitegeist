@@ -98,10 +98,28 @@ function reorderMessages(messages: Message[]): Message[] {
 
 // Custom message transformer for browser extension
 // Handles navigation messages and app-specific message types
+/** Prepends text to a user message's content, whether it is a string or content blocks. */
+function prependToUserContent(content: any, prefix: string): any {
+	if (typeof content === "string") return prefix + content;
+	if (Array.isArray(content) && content[0]?.type === "text") {
+		return [{ ...content[0], text: prefix + content[0].text }, ...content.slice(1)];
+	}
+	if (Array.isArray(content)) return [{ type: "text", text: prefix }, ...content];
+	return content;
+}
+
 export async function browserMessageTransformer(messages: AgentMessage[]): Promise<Message[]> {
 	const transformed = [];
+	// Artifacts copied into a branched chat are invisible to the model otherwise: the history it
+	// sees was cut before they were made. Name them on the next user message.
+	let carriedOver: string[] = [];
 
 	for (const m of messages) {
+		if (m.role === "artifact" && m.carriedOver) {
+			carriedOver.push(m.filename);
+			continue;
+		}
+
 		// Filter out UI-only messages
 		if (m.role === "artifact" || m.role === "welcome") {
 			continue;
@@ -144,6 +162,17 @@ ${skillsInfo}
 					{ ...rest.content[0], text: await expandSlashCommand(rest.content[0].text) },
 					...rest.content.slice(1),
 				];
+			}
+			if (carriedOver.length > 0) {
+				rest.content = prependToUserContent(
+					rest.content,
+					`<carried-over-artifacts>
+This chat was branched from an earlier one. The artifacts panel holds these files in their latest version from that chat, which can be newer than anything in the history above: ${carriedOver.join(", ")}. Read one with the artifacts tool's get command before changing it.
+</carried-over-artifacts>
+
+`,
+				);
+				carriedOver = [];
 			}
 			transformed.push(rest as Message);
 		} else {

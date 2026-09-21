@@ -1,5 +1,5 @@
 import type { Attachment, MessageRenderer } from "@mariozechner/pi-web-ui";
-import { registerMessageRenderer, type UserMessageWithAttachments } from "@mariozechner/pi-web-ui";
+import { registerMessageRenderer, renderBranchButton, type UserMessageWithAttachments } from "@mariozechner/pi-web-ui";
 import { html, LitElement } from "lit";
 import { customElement, property } from "lit/decorators.js";
 
@@ -28,7 +28,7 @@ export class SitegeistUserMessage extends LitElement {
 						?.text || "";
 
 		return html`
-			<div class="flex justify-start ml-4">
+			<div class="group flex flex-col items-start ml-4">
 				<div class="user-message-container py-2 px-4 rounded-xl">
 					<markdown-block .content=${content}></markdown-block>
 					${
@@ -44,6 +44,7 @@ export class SitegeistUserMessage extends LitElement {
 							: ""
 					}
 				</div>
+				${renderBranchButton(this.message)}
 			</div>
 		`;
 	}

@@ -235,6 +235,13 @@ export class AgentInterface extends LitElement {
 		this._lastClientHeight = clientHeight;
 	};
 
+	/** Put text and attachments in the message box without sending them. */
+	public async setDraft(text: string, attachments: Attachment[] = []) {
+		await this.updateComplete;
+		this._messageEditor.value = text;
+		this._messageEditor.attachments = attachments;
+	}
+
 	public async sendMessage(input: string, attachments?: Attachment[]) {
 		if ((!input.trim() && attachments?.length === 0) || this.session?.state.isStreaming) return;
 		const session = this.session;

@@ -18,6 +18,7 @@ import {
 	type ModelThinkingLevel,
 } from "@earendil-works/pi-ai/compat";
 import {
+	type ArtifactMessage,
 	ChatPanel,
 	createExtractDocumentTool,
 	createStreamFn,
@@ -27,6 +28,7 @@ import {
 	// PersistentStorageDialog,
 	setAppStorage,
 	setShowJsonMode,
+	type UserMessageWithAttachments,
 } from "@mariozechner/pi-web-ui";
 import { html, render } from "lit";
 import { History, Plus, Settings } from "lucide";
@@ -638,6 +640,73 @@ const newSession = () => {
 	window.location.href = url.toString();
 };
 
+// The text of the message a branch was made from, handed to the new chat's message box across
+// the page load that opens it.
+const BRANCH_DRAFT_KEY = "sitegeist.branchDraft";
+
+/**
+ * Opens a new chat holding everything before `message`, with the message itself back in the box
+ * to edit. The original chat is untouched. Every artifact comes along in its current version,
+ * including ones made after the branch point, so a good artifact is never left behind.
+ */
+const branchFromMessage = async (message: AgentMessage) => {
+	if (!agent || agent.state.isStreaming || !storage.sessions) return;
+	const index = agent.state.messages.indexOf(message);
+	if (index < 0) return;
+
+	const carried: ArtifactMessage[] = [...(chatPanel.artifactsPanel?.artifacts.values() ?? [])].map((a) => ({
+		role: "artifact",
+		action: "create",
+		filename: a.filename,
+		content: a.content,
+		timestamp: new Date().toISOString(),
+		carriedOver: true,
+	}));
+	const messages = [...agent.state.messages.slice(0, index), ...carried];
+
+	const draft = message as UserMessageWithAttachments;
+	const text =
+		typeof draft.content === "string"
+			? draft.content
+			: draft.content
+					.filter((c) => c.type === "text")
+					.map((c) => (c as { text: string }).text)
+					.join("\n");
+	try {
+		sessionStorage.setItem(BRANCH_DRAFT_KEY, JSON.stringify({ text, attachments: draft.attachments ?? [] }));
+	} catch {
+		// Attachments too large for sessionStorage: keep the text at least
+		try {
+			sessionStorage.setItem(BRANCH_DRAFT_KEY, JSON.stringify({ text, attachments: [] }));
+		} catch {}
+	}
+
+	if (messages.length === 0 || messages.every((m) => m.role === "welcome")) {
+		newSession();
+		return;
+	}
+
+	const id = crypto.randomUUID();
+	const title = `${currentTitle || generateTitle(agent.state.messages)} (branch)`;
+	await storage.sessions.saveSession(id, { ...agent.state, messages }, undefined, title);
+	loadSession(id);
+};
+
+document.addEventListener("branch-from-message", (e) => {
+	branchFromMessage((e as CustomEvent<{ message: AgentMessage }>).detail.message);
+});
+
+const restoreBranchDraft = async () => {
+	let raw: string | null = null;
+	try {
+		raw = sessionStorage.getItem(BRANCH_DRAFT_KEY);
+		sessionStorage.removeItem(BRANCH_DRAFT_KEY);
+	} catch {}
+	if (!raw || !chatPanel.agentInterface) return;
+	const { text, attachments } = JSON.parse(raw);
+	await chatPanel.agentInterface.setDraft(text, attachments);
+};
+
 // ============================================================================
 // RENDER
 // ============================================================================
@@ -1014,6 +1083,7 @@ async function initApp() {
 			});
 
 			renderApp();
+			await restoreBranchDraft();
 			return;
 		} else {
 			// Session doesn't exist, redirect to new session
@@ -1032,6 +1102,7 @@ async function initApp() {
 	}
 
 	renderApp();
+	await restoreBranchDraft();
 
 	// If no API keys configured, show welcome dialog, open settings, then auto-select model
 	if (!(await hasAnyApiKey())) {

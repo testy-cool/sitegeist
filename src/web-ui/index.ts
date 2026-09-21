@@ -21,6 +21,7 @@ export {
 	defaultConvertToLlm,
 	isArtifactMessage,
 	isUserMessageWithAttachments,
+	renderBranchButton,
 	ToolMessage,
 	ToolMessageDebugView,
 	UserMessage,

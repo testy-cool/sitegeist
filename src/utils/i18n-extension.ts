@@ -97,6 +97,8 @@ declare module "@mariozechner/mini-lit" {
 		"Original project": string;
 		"A fork of Mario Zechner's Sitegeist. Licensed AGPL-3.0.": string;
 		"Export Markdown": string;
+		Branch: string;
+		"Continue from here in a new chat": string;
 		"Export as Markdown": string;
 		"Write every session to a folder you choose, as Markdown": string;
 		"Wrote {count} to {folder}": string;
@@ -204,6 +206,8 @@ const sitegeistTranslations = {
 		"A fork of Mario Zechner's Sitegeist. Licensed AGPL-3.0.":
 			"A fork of Mario Zechner's Sitegeist. Licensed AGPL-3.0.",
 		"Export Markdown": "Export Markdown",
+		Branch: "Branch",
+		"Continue from here in a new chat": "Continue from here in a new chat",
 		"Export as Markdown": "Export as Markdown",
 		"Write every session to a folder you choose, as Markdown":
 			"Write every session to a folder you choose, as Markdown",
@@ -312,6 +316,8 @@ const sitegeistTranslations = {
 		"A fork of Mario Zechner's Sitegeist. Licensed AGPL-3.0.":
 			"Ein Fork von Mario Zechners Sitegeist. Lizenziert unter AGPL-3.0.",
 		"Export Markdown": "Markdown exportieren",
+		Branch: "Abzweigen",
+		"Continue from here in a new chat": "Ab hier in einem neuen Chat weitermachen",
 		"Export as Markdown": "Als Markdown exportieren",
 		"Write every session to a folder you choose, as Markdown":
 			"Alle Sitzungen als Markdown in einen selbst gewählten Ordner schreiben",
