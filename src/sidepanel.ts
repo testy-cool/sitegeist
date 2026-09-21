@@ -505,6 +505,12 @@ const createAgent = async (initialState?: Partial<AgentState>, shouldSave = true
 				providers,
 			);
 		},
+		slashCommands: async () => {
+			const skills = await storage.skills.list();
+			return skills
+				.map((skill) => ({ name: skill.name, description: skill.shortDescription }))
+				.sort((a, b) => a.name.localeCompare(b.name));
+		},
 		onBeforeSend: async () => {
 			if (!agent) return;
 

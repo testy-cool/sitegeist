@@ -4,6 +4,7 @@ import { customElement, state } from "lit/decorators.js";
 import "./components/AgentInterface.ts";
 import type { Agent, AgentTool } from "@earendil-works/pi-agent-core";
 import type { AgentInterface } from "./components/AgentInterface.ts";
+import type { SlashCommand } from "./components/MessageEditor.ts";
 import { ArtifactsRuntimeProvider } from "./components/sandbox/ArtifactsRuntimeProvider.ts";
 import { AttachmentsRuntimeProvider } from "./components/sandbox/AttachmentsRuntimeProvider.ts";
 import type { SandboxRuntimeProvider } from "./components/sandbox/SandboxRuntimeProvider.ts";
@@ -60,6 +61,7 @@ export class ChatPanel extends LitElement {
 			onBeforeSend?: () => void | Promise<void>;
 			onCostClick?: () => void;
 			onModelSelect?: () => void;
+			slashCommands?: () => Promise<SlashCommand[]>;
 			sandboxUrlProvider?: () => string;
 			toolsFactory?: (
 				agent: Agent,
@@ -82,6 +84,7 @@ export class ChatPanel extends LitElement {
 		this.agentInterface.onModelSelect = config?.onModelSelect;
 		this.agentInterface.onBeforeSend = config?.onBeforeSend;
 		this.agentInterface.onCostClick = config?.onCostClick;
+		this.agentInterface.slashCommands = config?.slashCommands;
 
 		// Set up artifacts panel
 		this.artifactsPanel = new ArtifactsPanel();

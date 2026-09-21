@@ -11,6 +11,12 @@ import { i18n } from "../utils/i18n.ts";
 import "./AttachmentTile.ts";
 import type { ThinkingLevel } from "@earendil-works/pi-agent-core";
 
+/** An entry offered by the "/" menu. Picking one inserts `/name ` at the start of the message. */
+export interface SlashCommand {
+	name: string;
+	description: string;
+}
+
 /** Display label per reasoning tier. Wrapped in thunks so i18n() runs after translations load. */
 const THINKING_LEVEL_LABELS: Record<ModelThinkingLevel, () => string> = {
 	off: () => i18n("Off"),
@@ -50,6 +56,8 @@ export class MessageEditor extends LitElement {
 	@property() onModelSelect?: () => void;
 	@property() onThinkingChange?: (level: ModelThinkingLevel) => void;
 	@property() onFilesChange?: (files: Attachment[]) => void;
+	/** Loads the "/" menu entries. Called each time the user starts a slash command, so new skills show up. */
+	@property({ attribute: false }) slashCommands?: () => Promise<SlashCommand[]>;
 	@property() attachments: Attachment[] = [];
 	@property() maxFiles = 10;
 	@property() maxFileSize = 20 * 1024 * 1024; // 20MB
@@ -58,6 +66,9 @@ export class MessageEditor extends LitElement {
 
 	@state() processingFiles = false;
 	@state() isDragging = false;
+	@state() private slashMatches: SlashCommand[] = [];
+	@state() private slashIndex = 0;
+	private slashCatalog?: SlashCommand[];
 	private fileInputRef = createRef<HTMLInputElement>();
 
 	protected override createRenderRoot(): HTMLElement | DocumentFragment {
@@ -68,11 +79,63 @@ export class MessageEditor extends LitElement {
 		const textarea = e.target as HTMLTextAreaElement;
 		this.value = textarea.value;
 		this.onInput?.(this.value);
+		this.updateSlashMenu();
 	};
+
+	/** The "/" menu stays open while the message is a single word starting with "/". */
+	private async updateSlashMenu() {
+		const match = /^\/(\S*)$/.exec(this.value);
+		if (!match || !this.slashCommands) {
+			this.slashCatalog = undefined;
+			this.slashMatches = [];
+			return;
+		}
+		if (!this.slashCatalog) {
+			this.slashCatalog = await this.slashCommands();
+		}
+		const query = match[1].toLowerCase();
+		const byName = this.slashCatalog.filter((c) => c.name.toLowerCase().startsWith(query));
+		const bySubstring = this.slashCatalog.filter((c) => !byName.includes(c) && c.name.toLowerCase().includes(query));
+		// The value may have changed while the catalog loaded.
+		if (!/^\/\S*$/.test(this.value)) return;
+		this.slashMatches = [...byName, ...bySubstring];
+		this.slashIndex = 0;
+	}
+
+	private pickSlashCommand(command: SlashCommand) {
+		this.value = `/${command.name} `;
+		this.onInput?.(this.value);
+		this.slashMatches = [];
+		const textarea = this.textareaRef.value;
+		if (textarea) {
+			textarea.value = this.value;
+			textarea.focus();
+			textarea.setSelectionRange(this.value.length, this.value.length);
+		}
+	}
 
 	private handleKeyDown = (e: KeyboardEvent) => {
 		// Ignore key events during IME composition (e.g. CJK input)
 		if (e.isComposing || e.key === "Process") return;
+
+		if (this.slashMatches.length > 0) {
+			const count = this.slashMatches.length;
+			if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+				e.preventDefault();
+				this.slashIndex = (this.slashIndex + (e.key === "ArrowDown" ? 1 : count - 1)) % count;
+				return;
+			}
+			if (e.key === "Tab" || (e.key === "Enter" && !e.shiftKey)) {
+				e.preventDefault();
+				this.pickSlashCommand(this.slashMatches[this.slashIndex]);
+				return;
+			}
+			if (e.key === "Escape") {
+				e.preventDefault();
+				this.slashMatches = [];
+				return;
+			}
+		}
 
 		if (e.key === "Enter" && !e.shiftKey) {
 			e.preventDefault();
@@ -246,6 +309,38 @@ export class MessageEditor extends LitElement {
 		}
 	}
 
+	private renderSlashMenu() {
+		if (this.slashMatches.length === 0) return "";
+		return html`
+			<div
+				class="absolute bottom-full left-0 right-0 mb-2 max-h-64 overflow-y-auto rounded-xl border border-border bg-popover text-popover-foreground shadow-md z-20 p-1"
+				role="listbox"
+			>
+				${this.slashMatches.map(
+					(command, index) => html`
+						<button
+							type="button"
+							role="option"
+							aria-selected=${index === this.slashIndex}
+							class="w-full text-left rounded-lg px-3 py-2 flex flex-col gap-0.5 ${index === this.slashIndex ? "bg-accent text-accent-foreground" : "hover:bg-accent/50"}"
+							@mousedown=${(e: MouseEvent) => {
+								// mousedown, not click, so the textarea keeps focus
+								e.preventDefault();
+								this.pickSlashCommand(command);
+							}}
+							@mouseenter=${() => {
+								this.slashIndex = index;
+							}}
+						>
+							<span class="text-sm font-medium">/${command.name}</span>
+							<span class="text-xs text-muted-foreground truncate">${command.description}</span>
+						</button>
+					`,
+				)}
+			</div>
+		`;
+	}
+
 	override render() {
 		// Check if current model supports thinking/reasoning
 		const model = this.currentModel;
@@ -268,6 +363,8 @@ export class MessageEditor extends LitElement {
 				`
 						: ""
 				}
+
+				${this.renderSlashMenu()}
 
 				<!-- Attachments -->
 				${

@@ -10,7 +10,7 @@ export { ConsoleBlock } from "./components/ConsoleBlock.ts";
 export { CustomProviderCard } from "./components/CustomProviderCard.ts";
 export { ExpandableSection } from "./components/ExpandableSection.ts";
 export { Input } from "./components/Input.ts";
-export { MessageEditor } from "./components/MessageEditor.ts";
+export { MessageEditor, type SlashCommand } from "./components/MessageEditor.ts";
 export { MessageList } from "./components/MessageList.ts";
 // Message components
 export type { ArtifactMessage, UserMessageWithAttachments } from "./components/Messages.ts";

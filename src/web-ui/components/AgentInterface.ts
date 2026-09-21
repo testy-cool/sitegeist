@@ -2,7 +2,7 @@ import type { ToolResultMessage, Usage } from "@earendil-works/pi-ai/compat";
 import { html, LitElement } from "lit";
 import { customElement, property, query } from "lit/decorators.js";
 import { ModelSelector } from "../dialogs/ModelSelector.ts";
-import type { MessageEditor } from "./MessageEditor.ts";
+import type { MessageEditor, SlashCommand } from "./MessageEditor.ts";
 import "./MessageEditor.ts";
 import "./MessageList.ts";
 import "./Messages.ts"; // Import for side effects to register the custom elements
@@ -34,6 +34,8 @@ export class AgentInterface extends LitElement {
 	@property({ attribute: false }) onCostClick?: () => void;
 	// Optional callback to override model selector behavior
 	@property({ attribute: false }) onModelSelect?: () => void;
+	// Optional loader for the "/" menu in the message editor
+	@property({ attribute: false }) slashCommands?: () => Promise<SlashCommand[]>;
 
 	// References
 	@query("message-editor") private _messageEditor!: MessageEditor;
@@ -389,6 +391,7 @@ export class AgentInterface extends LitElement {
 							.showAttachmentButton=${this.enableAttachments}
 							.showModelSelector=${this.enableModelSelector}
 							.showThinkingSelector=${this.enableThinkingSelector}
+							.slashCommands=${this.slashCommands}
 							.onSend=${(input: string, attachments: Attachment[]) => {
 								this.sendMessage(input, attachments);
 							}}

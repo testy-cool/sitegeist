@@ -1,6 +1,30 @@
 import type { AgentMessage } from "@earendil-works/pi-agent-core";
 import type { Message } from "@earendil-works/pi-ai";
+import { getSitegeistStorage } from "../storage/app-storage.js";
 import type { NavigationMessage } from "./NavigationMessage.js";
+
+/**
+ * A user message starting with "/name" invokes the skill of that name. The transcript keeps what the user
+ * typed; the model gets the skill's description and examples in front of it. The skill is read on every
+ * turn, so an edited skill takes effect in the same session.
+ */
+async function expandSlashCommand(text: string): Promise<string> {
+	const match = /^\/(\S+)\s*([\s\S]*)$/.exec(text);
+	if (!match) return text;
+	const [, name, request] = match;
+	const skill = await getSitegeistStorage().skills.get(name);
+	if (!skill) return text;
+	return `<skill-invocation>
+The user invoked the "${skill.name}" skill. Use it for this request. Its library is injected on pages matching: ${skill.domainPatterns.join(", ")}. Navigate to a matching page first if the current tab is not one.
+
+${skill.description}
+
+Examples:
+${skill.examples}
+</skill-invocation>
+
+${request || `Run the "${skill.name}" skill.`}`;
+}
 
 // Helper: Check if a message has toolCall blocks
 function hasToolCalls(msg: Message): boolean {
@@ -113,6 +137,14 @@ ${skillsInfo}
 			} as Message);
 		} else if (m.role === "user") {
 			const { attachments, ...rest } = m as any;
+			if (typeof rest.content === "string") {
+				rest.content = await expandSlashCommand(rest.content);
+			} else if (Array.isArray(rest.content) && rest.content[0]?.type === "text") {
+				rest.content = [
+					{ ...rest.content[0], text: await expandSlashCommand(rest.content[0].text) },
+					...rest.content.slice(1),
+				];
+			}
 			transformed.push(rest as Message);
 		} else {
 			transformed.push(m as Message);
