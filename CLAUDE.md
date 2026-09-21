@@ -24,6 +24,7 @@ Two pi-ai details worth knowing before you debug a model problem:
 - Building pi-ai **from a source checkout** does not work that way: `packages/ai/src/providers/data/` is gitignored and regenerated from the live models.dev feed on every build, so pinning a pi-mono commit pins nothing, and a newer feed against older source may not compile at all. On 2026-08-30 models.dev dropped the `openai-completions` models from `cloudflare-ai-gateway`, which narrowed a generated type until the hand-written provider file no longer type-checked (`src/providers/cloudflare-ai-gateway.ts(19,4): error TS2353`). If you link a checkout, copy `providers/data/` from one known to build and use **`npm run build:offline`**, never `npm run build`. Depending on the published package avoids all of this.
 - The `openai-codex` list is hardcoded in `packages/ai/scripts/generate-models.ts` rather than fetched, so new ChatGPT-subscription models arrive only when the pi-ai version is bumped.
 - `getModel`, `getModels`, `getProviders`, `streamSimple`, and `complete` moved out of the package root; import them from `@earendil-works/pi-ai/compat`.
+- The provider map (`MODELS`) is not in pi-ai's package exports, yet `getProviders()` is just its keys. To add a whole provider (Bifrost is one), `src/utils/model-catalog-patches.ts` imports it by file path from `node_modules/@earendil-works/pi-ai/dist/models.generated.js`. Single-provider catalogs *are* exported, as `@earendil-works/pi-ai/providers/<name>.models`. A provider absent from pi-ai's own list still streams, through the generic handler for its `api`.
 
 ## Commands
 
@@ -32,6 +33,10 @@ Two pi-ai details worth knowing before you debug a model problem:
 - `npm run build` — one-off build into `dist-chrome/`.
 - `./release.sh <major|minor|patch>` — bumps `static/manifest.chrome.json` (the only place the version lives), finalizes `CHANGELOG.md`, commits, tags, pushes. The tag triggers `.github/workflows/build.yml`, which clones both sibling repos, builds, and publishes `sitegeist.zip` as a GitHub release.
 - `cd site && ./run.sh deploy` — builds and rsyncs the static marketing site to `sitegeist.ai`.
+
+`uv run scripts/headless-check.py "<message>"` loads `dist-chrome/` into a throwaway headless Chromium, sends one message and prints the transcript, without touching any real browser. `--key <provider>` stores `$<PROVIDER>_KEY` first; `--capture` prints the outgoing request bodies instead of calling the model. Use it to verify a change end to end before reloading the user's extension.
+
+On this machine npm is blocked: build with `node ./scripts/build.mjs` and then `./node_modules/.bin/tailwindcss -i ./src/app.css -o ./dist-chrome/app.css --minify`, because the one-off build leaves `app.css` stale. Run Biome as `./node_modules/.bin/biome`; `npx biome` fetches an unrelated package.
 
 There is no test suite. `static/debug.html` (built from `src/debug.ts`, reachable via Cmd/Ctrl+U from the side panel) is the manual harness: a REPL panel, canned test prompts, and direct tool invocation.
 
