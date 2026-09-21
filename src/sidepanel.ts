@@ -121,6 +121,7 @@ const DEFAULT_MODELS: Record<string, string> = {
 	"amazon-bedrock": "us.anthropic.claude-opus-4-6-v1",
 	anthropic: "claude-sonnet-4-6",
 	"azure-openai-responses": "gpt-5.2",
+	bifrost: "azure/deepseek-v4-flash",
 	cerebras: "gpt-oss-120b",
 	deepseek: "deepseek-flash",
 	"github-copilot": "gpt-5.6-terra",
