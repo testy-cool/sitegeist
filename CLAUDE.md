@@ -38,6 +38,8 @@ Two pi-ai details worth knowing before you debug a model problem:
 
 On this machine npm is blocked: build with `node ./scripts/build.mjs` and then `./node_modules/.bin/tailwindcss -i ./src/app.css -o ./dist-chrome/app.css --minify`, because the one-off build leaves `app.css` stale. Run Biome as `./node_modules/.bin/biome`; `npx biome` fetches an unrelated package.
 
+After building, load the build into Vlad's Chrome with `crxctl reload hdcmhlembeghiniecceiccdnmdbeggkl --json` and check that it returns `changed: true` and `extension.enabled: true`. Do not assume `./dev.sh` is running: its live reload works only while the watcher is up and the extension is connected to port 8765, and when it is not, nothing reloads and nothing reports it.
+
 There is no test suite. `static/debug.html` (built from `src/debug.ts`, reachable via Cmd/Ctrl+U from the side panel) is the manual harness: a REPL panel, canned test prompts, and direct tool invocation.
 
 Biome formats with **tabs at width 3** and a 120-column line width; `site/` is excluded from the root Biome config and checked by its own.
