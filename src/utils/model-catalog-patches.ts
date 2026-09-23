@@ -1,5 +1,7 @@
 import type { Model } from "@earendil-works/pi-ai/compat";
 import { DEEPSEEK_MODELS } from "@earendil-works/pi-ai/providers/deepseek.models";
+import { OPENAI_MODELS } from "@earendil-works/pi-ai/providers/openai.models";
+import { OPENAI_CODEX_MODELS } from "@earendil-works/pi-ai/providers/openai-codex.models";
 import { MODELS } from "../../node_modules/@earendil-works/pi-ai/dist/models.generated.js";
 
 // pi-ai 0.85.1 still lists the retired DeepSeek Flash ids. DeepSeek now serves them
@@ -25,6 +27,23 @@ if (retiredFlash && !catalog["deepseek-flash"]) {
 
 	if (pro) {
 		pro.cost = { input: 1.32, output: 3.96, cacheRead: 0.044, cacheWrite: 0 };
+	}
+}
+
+// GPT-6 Sol and Luna shipped on 2026-09-22 and first appear in pi-ai 0.87.1, three versions past
+// the pinned one. Each is cloned from its GPT-5.6 namesake, whose shape this pi-ai already streams,
+// with the id, name and price from 0.87.1's catalog. Delete this block once pi-ai is bumped.
+const gpt6Cost = {
+	"gpt-6-sol": { input: 2, output: 10, cacheRead: 0.2, cacheWrite: 2.5 },
+	"gpt-6-luna": { input: 0.1, output: 0.5, cacheRead: 0.01, cacheWrite: 0.125 },
+};
+for (const openaiCatalog of [OPENAI_CODEX_MODELS, OPENAI_MODELS] as Record<string, Model<any>>[]) {
+	for (const tier of ["sol", "luna"] as const) {
+		const base = openaiCatalog[`gpt-5.6-${tier}`];
+		const id = `gpt-6-${tier}` as const;
+		if (base && !openaiCatalog[id]) {
+			openaiCatalog[id] = { ...base, id, name: `GPT-6 ${tier === "sol" ? "Sol" : "Luna"}`, cost: gpt6Cost[id] };
+		}
 	}
 }
 
